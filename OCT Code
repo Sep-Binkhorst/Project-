@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 grootte_x = 512
 grootte_y = 50
-grootte_z = 498
+grootte_z = 500
 grootte_volume = (grootte_z, grootte_y, grootte_x)  
 
-data_bestand = 'tape_06-06-2024.mraw'
+data_bestand = 'sep3.mraw'
 with open(data_bestand, 'rb') as data_2:
     dtype = np.uint8
     data = np.fromfile(data_2, dtype=dtype)
@@ -42,4 +42,23 @@ plt.imshow(np.mean(np.log(magnitude_spectrum[:, magnitude_spectrum.shape[1] // 2
 plt.subplot(3,1,3)
 plt.imshow(np.log(magnitude_spectrum[:, :, magnitude_spectrum.shape[2] // 2]), cmap='gray')
 
+plt.show()
+
+
+values = []
+count_lijst = []
+
+golflengte_waardes, counts = np.unique(eind_data, return_counts=True)
+
+for value, count in zip(golflengte_waardes, counts):
+    if value == 255:
+        break
+    else:
+        print(f"{value} occurs {count} times")
+        values.append(value)
+        count_lijst.append(count)
+    
+
+plt.figure()
+plt.plot(values, count_lijst)
 plt.show()
