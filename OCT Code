@@ -3,22 +3,43 @@ import matplotlib.pyplot as plt
 
 grootte_x = 512
 grootte_y = 50
-grootte_z = 500
-grootte_volume = (grootte_y, grootte_x, grootte_z)  
+grootte_z = 498
+grootte_volume = (grootte_z, grootte_y, grootte_x)  
 
-data_bestand = 'sep&duran.mraw'
+data_bestand = 'tape_06-06-2024.mraw'
 with open(data_bestand, 'rb') as data_2:
     dtype = np.uint8
     data = np.fromfile(data_2, dtype=dtype)
 
 eind_data = data.reshape(grootte_volume)
+eind_data = eind_data[0:216,:,:]
+middelste_laag = eind_data[:, :, eind_data.shape[2] // 2]
+middelste_laag2 = eind_data[:, eind_data.shape[1] // 2, :]
+middelste_laag3 = eind_data[eind_data.shape[0] // 2, :, :]
+# eerste_laag = eind_data[eind_data.shape[1] // 2, :, :]
+# tweede_laag = eind_data[eind_data.shape[-1] // 2, :, :]
 
-middelste_laag = eind_data[eind_data.shape[0] // 2, :, :]
-
+plt.subplot(3, 1, 1)
+plt.imshow(middelste_laag2, cmap='gray')
+plt.subplot(3, 1, 2)
+plt.imshow(middelste_laag3, cmap='gray')
+plt.subplot(3,1,3)
 plt.imshow(middelste_laag, cmap='gray')
+# plt.imshow(eerste_laag, cmap='gray')
+# plt.imshow(tweede_laag, cmap='gray')
 plt.show()
 
-#hier de fourier transformatie
-fft_data = np.fft.fftn(eind_data)
-fft_data_shifted = np.fft.fftshift(fft_data)
-magnitude_spectrum = np.abs(fft_data_shifted)
+fft_data = np.fft.fft(eind_data, axis=0)
+# fft_data_shifted = np.fft.fftshift(fft_data)
+magnitude_spectrum = np.abs(fft_data)
+magnitude_spectrum[0: 5] = 0
+magnitude_spectrum= magnitude_spectrum[0 : magnitude_spectrum.shape[0] // 2]
+plt.figure()
+plt.subplot(3, 1, 1)
+plt.imshow(np.log(magnitude_spectrum[magnitude_spectrum.shape[0] // 2, :, :]), cmap='gray')
+plt.subplot(3, 1, 2)
+plt.imshow(np.mean(np.log(magnitude_spectrum[:, magnitude_spectrum.shape[1] // 2:, :]), axis=1), cmap='gray', vmin=4.5)
+plt.subplot(3,1,3)
+plt.imshow(np.log(magnitude_spectrum[:, :, magnitude_spectrum.shape[2] // 2]), cmap='gray')
+
+plt.show()
