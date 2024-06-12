@@ -6,18 +6,32 @@ grootte_y = 50
 grootte_z = 500
 grootte_volume = (grootte_z, grootte_y, grootte_x)  
 
-data_bestand = 'sep3.mraw'
+data_bestand = 'sep2.mraw'
 with open(data_bestand, 'rb') as data_2:
     dtype = np.uint8
     data = np.fromfile(data_2, dtype=dtype)
 
 eind_data = data.reshape(grootte_volume)
 eind_data = eind_data[0:216,:,:]
-middelste_laag = eind_data[:, :, eind_data.shape[2] // 2]
-middelste_laag2 = eind_data[:, eind_data.shape[1] // 2, :]
-middelste_laag3 = eind_data[eind_data.shape[0] // 2, :, :]
-# eerste_laag = eind_data[eind_data.shape[1] // 2, :, :]
-# tweede_laag = eind_data[eind_data.shape[-1] // 2, :, :]
+
+eind_data = np.array(eind_data, dtype=np.csingle)
+
+Z, Y, X = np.meshgrid(np.arange(eind_data.shape[0]), 
+                      np.arange(eind_data.shape[1]), 
+                      np.arange(eind_data.shape[2]), 
+                      indexing='ij')
+
+k= 5 * np.pi
+theta = k * Y        #   np.pi / 2   45 degrees
+phase_shift_factor = np.exp(1j * theta)
+eind_data = eind_data * phase_shift_factor
+
+eind_data_raw = np.abs(eind_data)
+
+middelste_laag = eind_data_raw[:, :, eind_data_raw.shape[2] // 2]
+middelste_laag2 = eind_data_raw[:, eind_data_raw.shape[1] // 2, :]
+middelste_laag3 = eind_data_raw[eind_data_raw.shape[0] // 2, :, :]
+
 
 plt.subplot(3, 1, 1)
 plt.imshow(middelste_laag2, cmap='gray')
@@ -25,12 +39,10 @@ plt.subplot(3, 1, 2)
 plt.imshow(middelste_laag3, cmap='gray')
 plt.subplot(3,1,3)
 plt.imshow(middelste_laag, cmap='gray')
-# plt.imshow(eerste_laag, cmap='gray')
-# plt.imshow(tweede_laag, cmap='gray')
+
 plt.show()
 
 fft_data = np.fft.fft(eind_data, axis=0)
-# fft_data_shifted = np.fft.fftshift(fft_data)
 magnitude_spectrum = np.abs(fft_data)
 magnitude_spectrum[0: 5] = 0
 magnitude_spectrum= magnitude_spectrum[0 : magnitude_spectrum.shape[0] // 2]
@@ -42,23 +54,4 @@ plt.imshow(np.mean(np.log(magnitude_spectrum[:, magnitude_spectrum.shape[1] // 2
 plt.subplot(3,1,3)
 plt.imshow(np.log(magnitude_spectrum[:, :, magnitude_spectrum.shape[2] // 2]), cmap='gray')
 
-plt.show()
-
-
-values = []
-count_lijst = []
-
-golflengte_waardes, counts = np.unique(eind_data, return_counts=True)
-
-for value, count in zip(golflengte_waardes, counts):
-    if value == 255:
-        break
-    else:
-        print(f"{value} occurs {count} times")
-        values.append(value)
-        count_lijst.append(count)
-    
-
-plt.figure()
-plt.plot(values, count_lijst)
 plt.show()
