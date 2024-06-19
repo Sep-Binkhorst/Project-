@@ -1,57 +1,96 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import ipywidgets as widgets
+%matplotlib widget
 
-grootte_x = 512
+grootte_x = 500
 grootte_y = 50
 grootte_z = 500
 grootte_volume = (grootte_z, grootte_y, grootte_x)  
 
-data_bestand = 'sep2.mraw'
+data_bestand = 'newtape.mraw'
 with open(data_bestand, 'rb') as data_2:
     dtype = np.uint8
     data = np.fromfile(data_2, dtype=dtype)
 
 eind_data = data.reshape(grootte_volume)
-eind_data = eind_data[0:216,:,:]
+eind_data = eind_data[0:459,:,:]
 
-eind_data = np.array(eind_data, dtype=np.csingle)
+slice_index = 1
 
-Z, Y, X = np.meshgrid(np.arange(eind_data.shape[0]), 
-                      np.arange(eind_data.shape[1]), 
-                      np.arange(eind_data.shape[2]), 
-                      indexing='ij')
-
-k= 5 * np.pi
-theta = k * Y        #   np.pi / 2   45 degrees
-phase_shift_factor = np.exp(1j * theta)
-eind_data = eind_data * phase_shift_factor
-
-eind_data_raw = np.abs(eind_data)
-
-middelste_laag = eind_data_raw[:, :, eind_data_raw.shape[2] // 2]
-middelste_laag2 = eind_data_raw[:, eind_data_raw.shape[1] // 2, :]
-middelste_laag3 = eind_data_raw[eind_data_raw.shape[0] // 2, :, :]
-
-
-plt.subplot(3, 1, 1)
-plt.imshow(middelste_laag2, cmap='gray')
-plt.subplot(3, 1, 2)
-plt.imshow(middelste_laag3, cmap='gray')
-plt.subplot(3,1,3)
-plt.imshow(middelste_laag, cmap='gray')
-
-plt.show()
-
-fft_data = np.fft.fft(eind_data, axis=0)
-magnitude_spectrum = np.abs(fft_data)
-magnitude_spectrum[0: 5] = 0
-magnitude_spectrum= magnitude_spectrum[0 : magnitude_spectrum.shape[0] // 2]
 plt.figure()
-plt.subplot(3, 1, 1)
-plt.imshow(np.log(magnitude_spectrum[magnitude_spectrum.shape[0] // 2, :, :]), cmap='gray')
-plt.subplot(3, 1, 2)
-plt.imshow(np.mean(np.log(magnitude_spectrum[:, magnitude_spectrum.shape[1] // 2:, :]), axis=1), cmap='gray', vmin=4.5)
-plt.subplot(3,1,3)
-plt.imshow(np.log(magnitude_spectrum[:, :, magnitude_spectrum.shape[2] // 2]), cmap='gray')
-
+plt.imshow(eind_data[slice_index, :, :], cmap='gray')
+plt.colorbar()
+plt.title(f'Slice {slice_index}')
 plt.show()
+
+Z = np.linspace(-1, 1, num=eind_data.shape[0])
+plt.figure()
+def phase(data, correction, u):
+    
+    plt.clf()
+    data = np.array(data, dtype=np.csingle)
+    
+    phase = correction * Z**2
+
+    phase_shift_factor = np.exp(1j * phase)
+
+    data = data * phase_shift_factor[:, None, None]
+    
+    # ruwe_data_aangepast = data[:, data.shape[1] // 2, :]
+    # plt.subplot(3, 1, 2)
+    # plt.imshow(ruwe_data_aangepast, cmap= 'gray')
+    
+    fft_data = np.fft.fft(data, axis=0)
+
+    fft_data = fft_data[0:fft_data.shape[0]//2]   
+    fft_data[0:15] = 0
+    
+    plt.subplot(3, 1, 3)
+    plt.imshow(np.log(np.abs(fft_data[15:, u, :])), cmap= 'gray')
+    
+    plt.show()
+
+
+#Optimaliseer de correction van de fase-verschuiving totdat'
+#Het beeld optimaal scherp is
+#En kies de laag met de beste scherpte
+@widgets.interact(j = (0, eind_data.shape[1]), correction = (-50, 50))
+def show(j=eind_data.shape[1]//2, correction=0):
+    phase(eind_data, correction, j)
+
+fft_data2 = np.fft.fftshift(np.fft.fft2(eind_data, axes=(1,2)), axes=(1,2))
+fft_data2[240:260,23:27]=0
+nieuw_eind_data = np.fft.ifft2(np.fft.ifftshift(fft_data2, axes=(1,2)), axes=(1,2))
+# if g == axial
+plt.figure()
+plt.imshow(np.log(np.abs(fft_data2)[70]), aspect= 'auto')
+plt.show()
+
+
+plt.figure()
+def phase(data, correction, u, dc):
+    
+    plt.clf()
+    data = np.array(data, dtype=np.csingle)
+
+    phase = correction * Z**2
+
+    phase_shift_factor = np.exp(1j * phase)
+
+    data = data * phase_shift_factor[:, None, None]
+    
+    fft_data = np.fft.fft(data, axis=0)
+
+    fft_data = fft_data[0:fft_data.shape[0]//2]   
+    fft_data[0:dc] = 0
+    
+    
+    plt.imshow(np.log(np.abs(fft_data[dc:, u, :])), cmap= 'gray')
+    
+    plt.show()
+
+uiteindelijke_correctie = -24
+uiteindelijke_laag = 19
+dc_filter = 25
+phase(nieuw_eind_data, uiteindelijke_correctie, uiteindelijke_laag, dc_filter)
