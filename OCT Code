@@ -1,32 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
+from scipy.ndimage import median_filter, gaussian_filter
 %matplotlib widget
 
 grootte_x = 500
-grootte_y = 50
+grootte_y = 500
 grootte_z = 500
 grootte_volume = (grootte_z, grootte_y, grootte_x)  
 
-data_bestand = 'newtape.mraw'
+data_bestand = 'resfoto.mraw'
 with open(data_bestand, 'rb') as data_2:
     dtype = np.uint8
     data = np.fromfile(data_2, dtype=dtype)
-
 eind_data = data.reshape(grootte_volume)
 eind_data = eind_data[0:459,:,:]
 
 slice_index = 1
-
 plt.figure()
 plt.imshow(eind_data[slice_index, :, :], cmap='gray')
 plt.colorbar()
 plt.title(f'Slice {slice_index}')
 plt.show()
 
+data_bestand2 = 'resfotoclosedaperture.mraw'
+with open(data_bestand2, 'rb') as data_2:
+    dtype = np.uint8
+    data2 = np.fromfile(data_2, dtype=dtype)
+eind_data2 = data2.reshape(grootte_volume)
+eind_data2 = eind_data2[0:459,:,:]
+
+slice_index = 1
+plt.figure()
+plt.imshow(eind_data2[slice_index, :, :], cmap='gray')
+plt.colorbar()
+plt.title(f'Slice {slice_index}')
+plt.show()
+
+eind_data = median_filter(eind_data, size=(3, 3, 3))
+
+eind_data = gaussian_filter(eind_data, sigma=1)
+
+
 Z = np.linspace(-1, 1, num=eind_data.shape[0])
 plt.figure()
-def phase(data, correction, u):
+def phase(data, correction, u, dc=0):
     
     plt.clf()
     data = np.array(data, dtype=np.csingle)
@@ -37,17 +55,13 @@ def phase(data, correction, u):
 
     data = data * phase_shift_factor[:, None, None]
     
-    # ruwe_data_aangepast = data[:, data.shape[1] // 2, :]
-    # plt.subplot(3, 1, 2)
-    # plt.imshow(ruwe_data_aangepast, cmap= 'gray')
-    
     fft_data = np.fft.fft(data, axis=0)
 
     fft_data = fft_data[0:fft_data.shape[0]//2]   
-    fft_data[0:15] = 0
+    fft_data[0:2] = 0
     
     plt.subplot(3, 1, 3)
-    plt.imshow(np.log(np.abs(fft_data[15:, u, :])), cmap= 'gray')
+    plt.imshow(np.log(np.abs(fft_data[2:, u, :])), cmap= 'gray')
     
     plt.show()
 
@@ -57,10 +71,10 @@ def phase(data, correction, u):
 #En kies de laag met de beste scherpte
 @widgets.interact(j = (0, eind_data.shape[1]), correction = (-50, 50))
 def show(j=eind_data.shape[1]//2, correction=0):
-    phase(eind_data, correction, j)
+    phase(eind_data, correction, j, 0)
 
 fft_data2 = np.fft.fftshift(np.fft.fft2(eind_data, axes=(1,2)), axes=(1,2))
-fft_data2[240:260,23:27]=0
+fft_data2[240:270,10:14]=0
 nieuw_eind_data = np.fft.ifft2(np.fft.ifftshift(fft_data2, axes=(1,2)), axes=(1,2))
 # if g == axial
 plt.figure()
@@ -85,12 +99,11 @@ def phase(data, correction, u, dc):
     fft_data = fft_data[0:fft_data.shape[0]//2]   
     fft_data[0:dc] = 0
     
-    
-    plt.imshow(np.log(np.abs(fft_data[dc:, u, :])), cmap= 'gray')
+    plt.imshow(np.log(np.abs(fft_data[15:, u, :])), cmap= 'gray')
     
     plt.show()
 
-uiteindelijke_correctie = -24
-uiteindelijke_laag = 19
-dc_filter = 25
+uiteindelijke_correctie = -22
+uiteindelijke_laag = 1
+dc_filter = 15
 phase(nieuw_eind_data, uiteindelijke_correctie, uiteindelijke_laag, dc_filter)
